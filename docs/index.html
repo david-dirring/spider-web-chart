@@ -3,115 +3,98 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>D3 Draggable Spider Chart</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <title>Spider-Chart Generator (Draggable)</title>
+
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <py-config>
+    packages = ["matplotlib", "numpy"]
+  </py-config>
+
   <style>
     body { font-family: sans-serif; padding: 1rem; }
-    svg { display: block; margin: auto; }
-    .axis line, .axis text { stroke: #bbb; fill: #666; }
-    .area { fill: steelblue; fill-opacity: 0.3; stroke: steelblue; stroke-width: 2; }
-    .point { fill: orange; cursor: pointer; }
+    #chart { display: block; margin: 1rem auto; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>Drag the points to update your chart</h1>
-  <svg id="chart" width="500" height="500"></svg>
+  <h1>Drag the points to edit your spider chart</h1>
+  <img id="chart" alt="Spider chart will render here">
+  <py-script>
+import matplotlib.pyplot as plt
+import numpy as np
+import io, base64
+from js import document, console
 
-  <script>
-  // 1. Setup
-  const labels     = ['A','B','C','D','E'];
-  const maxValue   = 10;
-  const levels     = 5;
-  const startLevel = 2;                              // 2nd ring out of 5
-  const values     = Array(labels.length)
-                         .fill(maxValue/levels * startLevel);
+# --- 1. Data & state ---
+labels = ['A','B','C','D','E']
+values = [5]*len(labels)
+dragging = None  # which axis index we’re dragging
 
-  const width   = 500, height = 500;
-  const margin  = 60;
-  const radius  = Math.min(width, height)/2 - margin;
-  const angleSlice = 2 * Math.PI / labels.length;
-  const rScale  = d3.scaleLinear()
-                    .domain([0, maxValue])
-                    .range([0, radius]);
+# --- 2. Draw function ---
+def draw_chart():
+    angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist()
+    vals_loop = values + values[:1]
+    angs_loop = angles + angles[:1]
 
-  // 2. Scales & angles
-  const angleSlice = 2 * Math.PI / labels.length;
-  const rScale = d3.scaleLinear()
-                   .domain([0, maxValue])
-                   .range([0, radius]);
+    fig, ax = plt.subplots(subplot_kw={'polar':True})
+    ax.plot(angs_loop, vals_loop, 'o-', linewidth=2)
+    ax.fill(angs_loop, vals_loop, alpha=0.25)
+    ax.set_thetagrids(np.degrees(angles), labels)
+    ax.set_ylim(0, 10)
 
-  // 3. Create SVG container
-  const svg = d3.select('#chart')
-    .attr('viewBox', `0 0 ${width} ${height}`)
-    .append('g')
-      .attr('transform', `translate(${width/2},${height/2})`);
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    data = base64.b64encode(buf.getvalue()).decode('ascii')
+    document.getElementById('chart').src = "data:image/png;base64," + data
 
-  // 4. Draw grid (levels)
-  for(let lvl=1; lvl<=levels; lvl++){
-    svg.append('circle')
-      .attr('r', radius/levels * lvl)
-      .attr('fill', 'none')
-      .attr('stroke', '#ddd');
-  }
+# --- 3. Helpers to map pointer → axis & value ---
+def pointer_to_polar(evt):
+    img = document.getElementById('chart')
+    rect = img.getBoundingClientRect()
+    cx, cy = rect.width/2, rect.height/2
+    x = evt.clientX - rect.left
+    y = evt.clientY - rect.top
+    dx, dy = x - cx, cy - y  # invert y so up is positive
+    angle = np.arctan2(dy, dx) % (2*np.pi)
+    dist  = np.hypot(dx, dy)
+    return angle, dist, rect.width/2
 
-  // 5. Draw axes
-  const axis = svg.selectAll('.axis')
-    .data(labels)
-    .enter().append('g')
-      .attr('class','axis')
-      .attr('transform', (_,i)=>`rotate(${(angleSlice*i)*180/Math.PI})`);
+def find_axis(angle):
+    sector = 2*np.pi / len(labels)
+    return int(((angle + sector/2) // sector) % len(labels))
 
-  axis.append('line')
-      .attr('x2', radius)
-      .attr('stroke','#bbb');
-  axis.append('text')
-      .attr('x', radius + 10)
-      .attr('dy', '0.35em')
-      .text(d=>d);
+# --- 4. Event handlers ---
+def on_pointer_down(evt):
+    global dragging
+    angle, dist, maxr = pointer_to_polar(evt)
+    idx = find_axis(angle)
+    # only start drag if near the current point (> 70% of radius)
+    if abs(dist - (values[idx]/10*maxr)) < maxr*0.15:
+        dragging = idx
 
-  // 6. Radar polygon generator
-  const radarLine = d3.lineRadial()
-    .radius((d,i) => rScale(values[i]))
-    .angle((_,i) => i * angleSlice)
-    .curve(d3.curveLinearClosed);
+def on_pointer_move(evt):
+    global dragging
+    if dragging is None:
+        return
+    angle, dist, maxr = pointer_to_polar(evt)
+    # clamp into [0,10]
+    new_val = min(max(int((dist/maxr)*10), 0), 10)
+    values[dragging] = new_val
+    draw_chart()
 
-  // 7. Draw the area
-  const area = svg.append('path')
-    .attr('class','area')
-    .attr('d', radarLine());
+def on_pointer_up(evt):
+    global dragging
+    dragging = None
 
-  // 8. Draw draggable points
-  const points = svg.selectAll('.point')
-    .data(values)
-    .enter().append('circle')
-      .attr('class','point')
-      .attr('r', 6)
-      .attr('cx', (_,i) => rScale(values[i]) * Math.cos(angleSlice*i - Math.PI/2))
-      .attr('cy', (_,i) => rScale(values[i]) * Math.sin(angleSlice*i - Math.PI/2))
-    .call(d3.drag()
-      .on('drag', function(event, d, i){
-        // convert pointer to local coords
-        const [x, y] = d3.pointer(event, this.parentNode);
-        // polar coords
-        let angle = Math.atan2(y, x) + Math.PI/2;
-        if(angle < 0) angle += 2*Math.PI;
-        let idx = Math.round(angle / angleSlice) % labels.length;
-        // radial distance → value
-        const newVal = Math.min(maxValue, Math.max(0, rScale.invert(Math.hypot(x, y))));
-        values[idx] = newVal;
-        updateChart();
-      })
-    );
+# --- 5. Wire it up ---
+chart = document.getElementById('chart')
+chart.addEventListener('pointerdown', on_pointer_down)
+chart.addEventListener('pointermove', on_pointer_move)
+chart.addEventListener('pointerup',   on_pointer_up)
 
-  // 9. Update function
-  function updateChart(){
-    // update area
-    area.attr('d', radarLine());
-    // update points
-    points.data(values)
-      .attr('cx', (_,i) => rScale(values[i]) * Math.cos(angleSlice*i - Math.PI/2))
-      .attr('cy', (_,i) => rScale(values[i]) * Math.sin(angleSlice*i - Math.PI/2));
-  }
-  </script>
+# initial render
+draw_chart()
+  </py-script>
 </body>
 </html>
