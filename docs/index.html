@@ -19,13 +19,20 @@
 
   <script>
   // 1. Setup
-  const labels = ['A','B','C','D','E'];
-  const values = [5, 5, 5, 5, 5];           // initial data
-  const width = 500, height = 500;
-  const margin = 60;
-  const radius = Math.min(width, height)/2 - margin;
-  const levels = 5;                         // concentric circles
-  const maxValue = 10;
+  const labels     = ['A','B','C','D','E'];
+  const maxValue   = 10;
+  const levels     = 5;
+  const startLevel = 2;                              // 2nd ring out of 5
+  const values     = Array(labels.length)
+                         .fill(maxValue/levels * startLevel);
+
+  const width   = 500, height = 500;
+  const margin  = 60;
+  const radius  = Math.min(width, height)/2 - margin;
+  const angleSlice = 2 * Math.PI / labels.length;
+  const rScale  = d3.scaleLinear()
+                    .domain([0, maxValue])
+                    .range([0, radius]);
 
   // 2. Scales & angles
   const angleSlice = 2 * Math.PI / labels.length;
