@@ -3,68 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Spider-Chart Generator</title>
-  <!-- Chart.js from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>D3 Draggable Spider Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 1rem; }
-    label { display: block; margin: 0.5rem 0 0.25rem; }
-    input { width: 100%; }
-    canvas { max-width: 400px; margin: 1rem 0; }
+    svg { display: block; margin: auto; }
+    .axis line, .axis text { stroke: #bbb; fill: #666; }
+    .area { fill: steelblue; fill-opacity: 0.3; stroke: steelblue; stroke-width: 2; }
+    .point { fill: orange; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>Spider-Chart Generator</h1>
-  <div id="sliders"></div>
-  <canvas id="chart" width="400" height="400"></canvas>
-  <!-- >>> add this button -->
-  <button id="downloadBtn">Download PNG</button>
+  <h1>Drag the points to update your chart</h1>
+  <svg id="chart" width="500" height="500"></svg>
 
   <script>
-    // --- defaults & sliders & chart init (unchanged) ---
-    const labels = ['A','B','C','D','E'];
-    let values = [5,5,5,5,5];
+  // 1. Setup
+  const labels = ['A','B','C','D','E'];
+  const values = [5, 5, 5, 5, 5];           // initial data
+  const width = 500, height = 500;
+  const margin = 60;
+  const radius = Math.min(width, height)/2 - margin;
+  const levels = 5;                         // concentric circles
+  const maxValue = 10;
 
-    const container = document.getElementById('sliders');
-    labels.forEach((lbl,i) => {
-      const wrapper = document.createElement('div');
-      const label   = document.createElement('label');
-      const input   = document.createElement('input');
-      label.textContent = lbl + ' (' + values[i] + ')';
-      input.type  = 'range'; input.min = 0; input.max = 10; input.value = values[i];
-      input.oninput = e => {
-        values[i] = +e.target.value;
-        label.textContent = lbl + ' (' + values[i] + ')';
+  // 2. Scales & angles
+  const angleSlice = 2 * Math.PI / labels.length;
+  const rScale = d3.scaleLinear()
+                   .domain([0, maxValue])
+                   .range([0, radius]);
+
+  // 3. Create SVG container
+  const svg = d3.select('#chart')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .append('g')
+      .attr('transform', `translate(${width/2},${height/2})`);
+
+  // 4. Draw grid (levels)
+  for(let lvl=1; lvl<=levels; lvl++){
+    svg.append('circle')
+      .attr('r', radius/levels * lvl)
+      .attr('fill', 'none')
+      .attr('stroke', '#ddd');
+  }
+
+  // 5. Draw axes
+  const axis = svg.selectAll('.axis')
+    .data(labels)
+    .enter().append('g')
+      .attr('class','axis')
+      .attr('transform', (_,i)=>`rotate(${(angleSlice*i)*180/Math.PI})`);
+
+  axis.append('line')
+      .attr('x2', radius)
+      .attr('stroke','#bbb');
+  axis.append('text')
+      .attr('x', radius + 10)
+      .attr('dy', '0.35em')
+      .text(d=>d);
+
+  // 6. Radar polygon generator
+  const radarLine = d3.lineRadial()
+    .radius((d,i) => rScale(values[i]))
+    .angle((_,i) => i * angleSlice)
+    .curve(d3.curveLinearClosed);
+
+  // 7. Draw the area
+  const area = svg.append('path')
+    .attr('class','area')
+    .attr('d', radarLine());
+
+  // 8. Draw draggable points
+  const points = svg.selectAll('.point')
+    .data(values)
+    .enter().append('circle')
+      .attr('class','point')
+      .attr('r', 6)
+      .attr('cx', (_,i) => rScale(values[i]) * Math.cos(angleSlice*i - Math.PI/2))
+      .attr('cy', (_,i) => rScale(values[i]) * Math.sin(angleSlice*i - Math.PI/2))
+    .call(d3.drag()
+      .on('drag', function(event, d, i){
+        // convert pointer to local coords
+        const [x, y] = d3.pointer(event, this.parentNode);
+        // polar coords
+        let angle = Math.atan2(y, x) + Math.PI/2;
+        if(angle < 0) angle += 2*Math.PI;
+        let idx = Math.round(angle / angleSlice) % labels.length;
+        // radial distance → value
+        const newVal = Math.min(maxValue, Math.max(0, rScale.invert(Math.hypot(x, y))));
+        values[idx] = newVal;
         updateChart();
-      };
-      wrapper.append(label, input);
-      container.appendChild(wrapper);
-    });
+      })
+    );
 
-    const ctx = document.getElementById('chart').getContext('2d');
-    const radar = new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels,
-        datasets: [{ label: 'Scores', data: values, fill: true }]
-      },
-      options: { scales: { r: { beginAtZero: true, max: 10 } } }
-    });
-    function updateChart() {
-      radar.data.datasets[0].data = values;
-      radar.update();
-    }
-
-    // --- new: download button handler ---
-    document.getElementById('downloadBtn').onclick = () => {
-      // Chart.js helper to get a PNG data URL
-      const dataURL = radar.toBase64Image();
-      // create a temporary link to trigger the download
-      const link = document.createElement('a');
-      link.href = dataURL;
-      link.download = 'spider-chart.png';
-      link.click();
-    };
+  // 9. Update function
+  function updateChart(){
+    // update area
+    area.attr('d', radarLine());
+    // update points
+    points.data(values)
+      .attr('cx', (_,i) => rScale(values[i]) * Math.cos(angleSlice*i - Math.PI/2))
+      .attr('cy', (_,i) => rScale(values[i]) * Math.sin(angleSlice*i - Math.PI/2));
+  }
   </script>
 </body>
 </html>
