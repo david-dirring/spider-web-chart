@@ -105,67 +105,77 @@
       control.className = 'control';
       control.setAttribute('draggable', true);
 
-      // Drag & Drop
+      // Drag & Drop handlers
       control.addEventListener('dragstart', e => { draggedControl = control; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain',''); });
       control.addEventListener('dragover', e => { e.preventDefault(); control.classList.add('drag-over'); });
       control.addEventListener('dragenter', e => { e.preventDefault(); control.classList.add('drag-over'); });
       control.addEventListener('dragleave', () => { control.classList.remove('drag-over'); });
-      control.addEventListener('drop', e => { e.preventDefault(); control.classList.remove('drag-over'); if (draggedControl && draggedControl!==control) { controlsDiv.insertBefore(draggedControl,control); updateChart(); }});
-      control.addEventListener('dragend', () => { document.querySelectorAll('.control').forEach(c=>c.classList.remove('drag-over')); draggedControl=null; });
+      control.addEventListener('drop', e => { e.preventDefault(); control.classList.remove('drag-over'); if (draggedControl && draggedControl !== control) { controlsDiv.insertBefore(draggedControl, control); updateChart(); }});
+      control.addEventListener('dragend', () => { document.querySelectorAll('.control').forEach(c => c.classList.remove('drag-over')); draggedControl = null; });
 
       // Name input
       const nameInput = document.createElement('input');
-      nameInput.type = 'text'; nameInput.value = label;
+      nameInput.type = 'text';
+      nameInput.value = label;
       nameInput.addEventListener('input', updateChart);
 
       // Value slider
       const rangeInput = document.createElement('input');
-      rangeInput.type = 'range'; rangeInput.min = 0; rangeInput.max = 10; rangeInput.value = value;
-      rangeInput.addEventListener('input', ()=>{ valueSpan.textContent=rangeInput.value; updateChart(); });
+      rangeInput.type = 'range';
+      rangeInput.min = 0;
+      rangeInput.max = 10;
+      rangeInput.value = value;
+      rangeInput.addEventListener('input', () => { valueSpan.textContent = rangeInput.value; updateChart(); });
 
-      const valueSpan = document.createElement('span'); valueSpan.textContent = value;
+      const valueSpan = document.createElement('span');
+      valueSpan.textContent = value;
 
       // Remove button
       const removeBtn = document.createElement('button');
-      removeBtn.className='remove-btn'; removeBtn.textContent='×';
-      removeBtn.addEventListener('click', ()=>{ control.remove(); updateChart(); });
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => { control.remove(); updateChart(); });
 
       control.append(nameInput, rangeInput, valueSpan, removeBtn);
       controlsDiv.appendChild(control);
       updateChart();
     }
 
-    // Initial load
-    defaultLabels.forEach((lab,i)=>createControl(lab,defaultData[i]));
+    // Load defaults
+    defaultLabels.forEach((lab, i) => createControl(lab, defaultData[i]));
 
-    // Add category
-    document.getElementById('addBtn').addEventListener('click', ()=>createControl());
+    // Add category button
+    document.getElementById('addBtn').addEventListener('click', () => createControl());
 
-    // Export image
-    document.getElementById('exportBtn').addEventListener('click', ()=>{
-      const link=document.createElement('a');
-      link.href=radarChart.toBase64Image();
-      link.download='radar-chart.png';
+    // Export chart as image
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = radarChart.toBase64Image();
+      link.download = 'radar-chart.png';
       link.click();
     });
 
     // Color picker
-    document.getElementById('colorInput').addEventListener('input', e=>{
-      const hex=e.target.value;
-      radarChart.data.datasets[0].backgroundColor=hexToRgba(hex,0.2);
-      radarChart.data.datasets[0].borderColor=hex;
+    document.getElementById('colorInput').addEventListener('input', e => {
+      const hex = e.target.value;
+      radarChart.data.datasets[0].backgroundColor = hexToRgba(hex, 0.2);
+      radarChart.data.datasets[0].borderColor = hex;
       radarChart.update();
     });
 
-    // Update chart
+    // Update chart with proper multiline labels
     function updateChart() {
-      const labels=[]; const data=[];
-      document.querySelectorAll('.control').forEach(ctrl=>{
-        labels.push(ctrl.querySelector('input[type="text"]').value);
+      const labels = [];
+      const data = [];
+      document.querySelectorAll('.control').forEach(ctrl => {
+        const raw = ctrl.querySelector('input[type="text"]').value.trim();
+        // Split on any whitespace, then rejoin with newline for multiline labels
+        const wrapped = raw.split(/\s+/).join('\n');
+        labels.push(wrapped);
         data.push(+ctrl.querySelector('input[type="range"]').value);
       });
-      radarChart.data.labels=labels;
-      radarChart.data.datasets[0].data=data;
+      radarChart.data.labels = labels;
+      radarChart.data.datasets[0].data = data;
       radarChart.update();
     }
   </script>
