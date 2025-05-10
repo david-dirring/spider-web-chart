@@ -40,11 +40,19 @@
       cursor: pointer;
     }
     #colorPicker { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+    #profileLink { text-align: center; margin: 10px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    #profileLink img { width: 40px; height: 40px; border-radius: 50%; }
+    #profileLink a { color: #0073b1; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
   <h2>What kind of data person are you?</h2>
   <canvas id="radarChart"></canvas>
+  <!-- LinkedIn Profile -->
+  <div id="profileLink">
+    <img src="https://media.licdn.com/dms/image/v2/D4E03AQFMTI68hC15NA/profile-displayphoto-shrink_400_400/B4EZRLw2SJGcAo-/0/1736437884358?e=1752105600&v=beta&t=HhQDfXVmgY0qBGrW5C_yBiM-VCuMsCEbPNbq3ZhyTto" alt="LinkedIn Profile Photo" />
+    <a href="https://www.linkedin.com/in/ddirring/" target="_blank" rel="noopener">https://www.linkedin.com/in/ddirring/</a>
+  </div>
   <div class="controls" id="controls"></div>
   <button id="addBtn">Add Category</button>
   <button id="exportBtn">Export Chart as Image</button>
@@ -54,6 +62,19 @@
   </div>
 
   <script>
+    // Plugin to draw white background behind the chart
+    Chart.register({
+      id: 'whiteBackground',
+      beforeDraw(chart) {
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+      }
+    });
+
     // Initial defaults
     const defaultLabels = ["Machine Learning", "Statistics", "Visualization", "Data Engineering", "Storytelling"];
     const defaultData = [2, 2, 2, 2, 2];
@@ -83,6 +104,7 @@
           }
         },
         plugins: {
+          whiteBackground: true,
           legend: { display: false }
         }
       }
@@ -169,7 +191,6 @@
       const data = [];
       document.querySelectorAll('.control').forEach(ctrl => {
         const raw = ctrl.querySelector('input[type="text"]').value.trim();
-        // Split on any whitespace, then rejoin with newline for multiline labels
         const wrapped = raw.split(/\s+/).join('\n');
         labels.push(wrapped);
         data.push(+ctrl.querySelector('input[type="range"]').value);
