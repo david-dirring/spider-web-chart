@@ -1,100 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Spider-Chart Generator (Draggable)</title>
-
-  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-  <py-config>
-    packages = ["matplotlib", "numpy"]
-  </py-config>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radar Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 1rem; }
-    #chart { display: block; margin: 1rem auto; cursor: pointer; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+    h2 { text-align: center; }
+    .controls { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+    .control { display: flex; align-items: center; }
+    .control input[type="text"] { width: 150px; margin-right: 10px; }
+    .control input[type="range"] { flex: 1; margin-right: 10px; }
+    .control span { width: 20px; text-align: right; }
   </style>
 </head>
 <body>
-  <h1>Drag the points to edit your spider chart</h1>
-  <img id="chart" alt="Spider chart will render here">
-  <py-script>
-import matplotlib.pyplot as plt
-import numpy as np
-import io, base64
-from js import document, console
+  <h2>Skill Radar Chart</h2>
+  <canvas id="radarChart"></canvas>
+  <div class="controls" id="controls"></div>
 
-# --- 1. Data & state ---
-labels = ['A','B','C','D','E']
-values = [5]*len(labels)
-dragging = None  # which axis index we’re dragging
+  <script>
+    // Default labels and data
+    const defaultLabels = [
+      "Machine Learning", "Statistics", "Visualization", "Data Engineering", "Storytelling"
+    ];
+    const defaultData = [5, 5, 5, 5, 5];
 
-# --- 2. Draw function ---
-def draw_chart():
-    angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist()
-    vals_loop = values + values[:1]
-    angs_loop = angles + angles[:1]
+    // Initialize Chart.js radar chart
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    const radarChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: [...defaultLabels],
+        datasets: [{
+          label: 'Your Skills',
+          data: [...defaultData],
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        scales: {
+          r: {
+            min: 0,
+            max: 10,
+            ticks: { stepSize: 1 }
+          }
+        },
+        plugins: {
+          legend: { position: 'top' }
+        }
+      }
+    });
 
-    fig, ax = plt.subplots(subplot_kw={'polar':True})
-    ax.plot(angs_loop, vals_loop, 'o-', linewidth=2)
-    ax.fill(angs_loop, vals_loop, alpha=0.25)
-    ax.set_thetagrids(np.degrees(angles), labels)
-    ax.set_ylim(0, 10)
+    // Create controls for each category
+    const controlsDiv = document.getElementById('controls');
+    defaultLabels.forEach((label, i) => {
+      const control = document.createElement('div');
+      control.className = 'control';
 
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    plt.close(fig)
-    data = base64.b64encode(buf.getvalue()).decode('ascii')
-    document.getElementById('chart').src = "data:image/png;base64," + data
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = label;
+      nameInput.dataset.index = i;
+      nameInput.addEventListener('input', updateChart);
 
-# --- 3. Helpers to map pointer → axis & value ---
-def pointer_to_polar(evt):
-    img = document.getElementById('chart')
-    rect = img.getBoundingClientRect()
-    cx, cy = rect.width/2, rect.height/2
-    x = evt.clientX - rect.left
-    y = evt.clientY - rect.top
-    dx, dy = x - cx, cy - y  # invert y so up is positive
-    angle = np.arctan2(dy, dx) % (2*np.pi)
-    dist  = np.hypot(dx, dy)
-    return angle, dist, rect.width/2
+      const rangeInput = document.createElement('input');
+      rangeInput.type = 'range';
+      rangeInput.min = 0;
+      rangeInput.max = 10;
+      rangeInput.value = defaultData[i];
+      rangeInput.dataset.index = i;
+      rangeInput.addEventListener('input', () => {
+        valueSpan.textContent = rangeInput.value;
+        updateChart();
+      });
 
-def find_axis(angle):
-    sector = 2*np.pi / len(labels)
-    return int(((angle + sector/2) // sector) % len(labels))
+      const valueSpan = document.createElement('span');
+      valueSpan.textContent = defaultData[i];
 
-# --- 4. Event handlers ---
-def on_pointer_down(evt):
-    global dragging
-    angle, dist, maxr = pointer_to_polar(evt)
-    idx = find_axis(angle)
-    # only start drag if near the current point (> 70% of radius)
-    if abs(dist - (values[idx]/10*maxr)) < maxr*0.15:
-        dragging = idx
+      control.append(nameInput, rangeInput, valueSpan);
+      controlsDiv.appendChild(control);
+    });
 
-def on_pointer_move(evt):
-    global dragging
-    if dragging is None:
-        return
-    angle, dist, maxr = pointer_to_polar(evt)
-    # clamp into [0,10]
-    new_val = min(max(int((dist/maxr)*10), 0), 10)
-    values[dragging] = new_val
-    draw_chart()
-
-def on_pointer_up(evt):
-    global dragging
-    dragging = None
-
-# --- 5. Wire it up ---
-chart = document.getElementById('chart')
-chart.addEventListener('pointerdown', on_pointer_down)
-chart.addEventListener('pointermove', on_pointer_move)
-chart.addEventListener('pointerup',   on_pointer_up)
-
-# initial render
-draw_chart()
-  </py-script>
+    // Update chart when inputs change
+    function updateChart() {
+      const newLabels = [];
+      const newData = [];
+      document.querySelectorAll('.control').forEach(ctrl => {
+        const idx = ctrl.querySelector('input[type="range"]').dataset.index;
+        newLabels.push(ctrl.querySelector('input[type="text"]').value);
+        newData.push(+ctrl.querySelector('input[type="range"]').value);
+      });
+      radarChart.data.labels = newLabels;
+      radarChart.data.datasets[0].data = newData;
+      radarChart.update();
+    }
+  </script>
 </body>
 </html>
