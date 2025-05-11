@@ -105,7 +105,7 @@
         scales: {
           r: {
             min: 1,
-            max: 6,
+            max: 5,
             ticks: { stepSize: 1 },
             pointLabels: {
               font: { size: 14, weight: 'bold' },
@@ -151,12 +151,16 @@
       const rangeInput = document.createElement('input');
       rangeInput.type = 'range';
       rangeInput.min = 1;
-      rangeInput.max = 6;
+      rangeInput.max = 5;
       rangeInput.value = value < 1 ? 1 : value;
-      rangeInput.addEventListener('input', () => { valueSpan.textContent = rangeInput.value; updateChart(); });
+      rangeInput.step = 0.1;
+      rangeInput.addEventListener('input', () => {
+        valueSpan.textContent = parseFloat(rangeInput.value).toFixed(1);
+        updateChart();
+      });
 
       const valueSpan = document.createElement('span');
-      valueSpan.textContent = value;
+      valueSpan.textContent = parseFloat(value).toFixed(1);
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'remove-btn';
