@@ -30,23 +30,32 @@
       background: #ea580c;
     }
     input[type="range"] { flex: 1; margin-right: 10px; }
-    .control span { width: 20px; text-align: right; margin-right: 10px; }
+    .control span { width: 40px; text-align: right; margin-right: 10px; }
     .control .remove-btn {
-      background: #EC6A6A;
-      color: white;
-      border: none;
+      background: #e0e0e0;
+      color: #333;
+      border: 1px solid #ccc;
       border-radius: 4px;
       width: 24px;
       height: 24px;
       cursor: pointer;
       margin-left: 2px;
     }
-    #addBtn, #exportBtn {
+    #addBtn, #resortBtn {
       margin-top: 10px;
       padding: 8px 12px;
       border: 1px solid #ea580c;
       background: #ea580c;
       color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #exportBtn {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      background: #e0e0e0;
+      color: #333;
       border-radius: 4px;
       cursor: pointer;
     }
@@ -64,8 +73,11 @@
     <a href="https://www.linkedin.com/in/ddirring/" target="_blank" rel="noopener">https://www.linkedin.com/in/ddirring/</a>
   </div>
   <div class="controls" id="controls"></div>
+  <div style="display: flex; justify-content: flex-start; gap: 10px; margin-top: 10px;">
+  <button id="resortBtn">Resort Categories (High to Low)</button>
   <button id="addBtn">Add Category</button>
-  <button id="exportBtn">Export Chart as Image</button>
+</div>
+<button id="exportBtn">Export Chart as Image</button>
   <div id="colorPicker">
     <label for="colorInput">Choose chart color:</label>
     <input type="color" id="colorInput" value="#ea580c">
@@ -152,8 +164,8 @@
       rangeInput.type = 'range';
       rangeInput.min = 1;
       rangeInput.max = 5;
-      rangeInput.value = value < 1 ? 1 : value;
       rangeInput.step = 0.1;
+      rangeInput.value = value < 1 ? 1 : value;
       rangeInput.addEventListener('input', () => {
         valueSpan.textContent = parseFloat(rangeInput.value).toFixed(1);
         updateChart();
@@ -190,6 +202,17 @@
       radarChart.data.datasets[0].backgroundColor = hexToRgba(hex, 0.2);
       radarChart.data.datasets[0].borderColor = hex;
       radarChart.update();
+    });
+
+    document.getElementById('resortBtn').addEventListener('click', () => {
+      const controlsArray = Array.from(document.querySelectorAll('.control'));
+      controlsArray.sort((a, b) => {
+        const valA = parseFloat(a.querySelector('input[type="range"]').value);
+        const valB = parseFloat(b.querySelector('input[type="range"]').value);
+        return valB - valA;
+      });
+      controlsArray.forEach(c => controlsDiv.appendChild(c));
+      updateChart();
     });
 
     function updateChart() {
