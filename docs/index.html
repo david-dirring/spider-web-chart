@@ -20,12 +20,19 @@
     }
     .control.drag-over { background: #e0f7fa; }
     .control input[type="text"] { width: 140px; margin-right: 10px; }
-    .control input[type="range"] { flex: 1; margin-right: 10px; }
+    .control input[type="range"]::-webkit-slider-thumb {
+      background: #ea580c;
+    }
+    input[type="range"]::-moz-range-thumb {
+      background: #ea580c;
+    }
+    input[type="range"]::-ms-thumb {
+      background: #ea580c;
+    }
+    input[type="range"] { flex: 1; margin-right: 10px; }
     .control span { width: 20px; text-align: right; margin-right: 10px; }
-    .control .remove-btn,
-    .control .up-btn,
-    .control .down-btn {
-      background: #e53935;
+    .control .remove-btn {
+      background: #EC6A6A;
       color: white;
       border: none;
       border-radius: 4px;
@@ -34,14 +41,11 @@
       cursor: pointer;
       margin-left: 2px;
     }
-    .control .up-btn, .control .down-btn {
-      background: #007bff;
-    }
     #addBtn, #exportBtn {
       margin-top: 10px;
       padding: 8px 12px;
-      border: 1px solid #007bff;
-      background: #007bff;
+      border: 1px solid #ea580c;
+      background: #ea580c;
       color: white;
       border-radius: 4px;
       cursor: pointer;
@@ -53,7 +57,7 @@
   </style>
 </head>
 <body>
-  <h2>What kind of data person are you?</h2>
+  <h2>What kind of data analytics professional are you?</h2>
   <canvas id="radarChart"></canvas>
   <div id="profileLink">
     <img src="https://media.licdn.com/dms/image/v2/D4E03AQFMTI68hC15NA/profile-displayphoto-shrink_400_400/B4EZRLw2SJGcAo-/0/1736437884358?e=1752105600&v=beta&t=HhQDfXVmgY0qBGrW5C_yBiM-VCuMsCEbPNbq3ZhyTto" alt="LinkedIn Profile Photo" />
@@ -64,7 +68,7 @@
   <button id="exportBtn">Export Chart as Image</button>
   <div id="colorPicker">
     <label for="colorInput">Choose chart color:</label>
-    <input type="color" id="colorInput" value="#36A2EB">
+    <input type="color" id="colorInput" value="#ea580c">
   </div>
 
   <script>
@@ -90,8 +94,8 @@
         labels: [],
         datasets: [{
           data: [],
-          backgroundColor: 'rgba(54,162,235,0.2)',
-          borderColor: '#36A2EB',
+          backgroundColor: 'rgba(234,88,12,0.2)',
+          borderColor: '#ea580c',
           borderWidth: 2
         }]
       },
@@ -152,30 +156,12 @@
       const valueSpan = document.createElement('span');
       valueSpan.textContent = value;
 
-      const upBtn = document.createElement('button');
-      upBtn.className = 'up-btn';
-      upBtn.textContent = '↑';
-      upBtn.addEventListener('click', () => {
-        const prev = control.previousElementSibling;
-        if (prev) controlsDiv.insertBefore(control, prev);
-        updateChart();
-      });
-
-      const downBtn = document.createElement('button');
-      downBtn.className = 'down-btn';
-      downBtn.textContent = '↓';
-      downBtn.addEventListener('click', () => {
-        const next = control.nextElementSibling;
-        if (next) controlsDiv.insertBefore(next, control);
-        updateChart();
-      });
-
       const removeBtn = document.createElement('button');
       removeBtn.className = 'remove-btn';
       removeBtn.textContent = '×';
       removeBtn.addEventListener('click', () => { control.remove(); updateChart(); });
 
-      control.append(nameInput, rangeInput, valueSpan, upBtn, downBtn, removeBtn);
+      control.append(nameInput, rangeInput, valueSpan, removeBtn);
       controlsDiv.appendChild(control);
       updateChart();
     }
