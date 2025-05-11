@@ -100,10 +100,12 @@
         }]
       },
       options: {
+        layout: { padding: 20 },
+        elements: { line: { tension: 0.4 } },
         scales: {
           r: {
-            min: 0,
-            max: 10,
+            min: 1,
+            max: 6,
             ticks: { stepSize: 1 },
             pointLabels: {
               font: { size: 14, weight: 'bold' },
@@ -148,9 +150,9 @@
 
       const rangeInput = document.createElement('input');
       rangeInput.type = 'range';
-      rangeInput.min = 0;
-      rangeInput.max = 10;
-      rangeInput.value = value;
+      rangeInput.min = 1;
+      rangeInput.max = 6;
+      rangeInput.value = value < 1 ? 1 : value;
       rangeInput.addEventListener('input', () => { valueSpan.textContent = rangeInput.value; updateChart(); });
 
       const valueSpan = document.createElement('span');
