@@ -11,14 +11,15 @@
     h2 { text-align: center; }
     .controls { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
     .control {
-      display: flex;
-      align-items: center;
-      padding: 5px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: #fafafa;
-      flex-wrap: wrap;
-    }
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fafafa;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
     .control.drag-over { background: #e0f7fa; }
     .control input[type="text"] { width: 140px; margin-right: 10px; }
     .control input[type="range"]::-webkit-slider-thumb {
@@ -31,11 +32,11 @@
       background: #777;
     }
     input[type="range"] {
-  flex: 1 1 auto;
+  flex: 1;
   margin-right: 10px;
-  min-width: 120px;
-  max-width: 200px;
-  width: 100%;
+  min-width: 100px;
+  max-width: none;
+  width: auto;
   box-sizing: border-box;
 }
     .control span { width: 40px; text-align: right; margin-right: 10px; }
